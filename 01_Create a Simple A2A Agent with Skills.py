@@ -1,17 +1,5 @@
-"""
-WeatherAgent เป็นคลาสที่สืบทอดมาจาก A2AServer ซึ่งมีหน้าที่ให้ข้อมูลสภาพอากาศ
-
-- @agent: ใช้สำหรับกำหนดข้อมูลเมตาของ Agent เช่น ชื่อ คำอธิบาย และเวอร์ชัน
-- @skill: ใช้สำหรับกำหนดทักษะ (Skill) ที่ Agent มี เช่น การดึงข้อมูลสภาพอากาศ
-- get_weather: ฟังก์ชันที่ใช้สำหรับดึงข้อมูลสภาพอากาศ (ในที่นี้เป็น Mock Data)
-- handle_task: ฟังก์ชันที่ใช้จัดการ Task โดยตรวจสอบข้อความที่ได้รับและตอบกลับด้วยข้อมูลสภาพอากาศ
-
-แนวทางการปรับปรุง:
-1. เชื่อมต่อกับ API จริงสำหรับดึงข้อมูลสภาพอากาศ เช่น OpenWeatherMap API
-2. เพิ่มการจัดการข้อผิดพลาด เช่น กรณีที่ข้อความไม่ชัดเจนหรือ API ล้มเหลว
-3. เพิ่มการรองรับหลายภาษาในข้อความตอบกลับ
-"""
 from python_a2a import A2AServer, skill, agent, run_server, TaskStatus, TaskState
+import requests  # สำหรับการเชื่อมต่อกับ OpenWeatherMap API
 
 @agent(
     name="Weather Agent",
@@ -26,19 +14,36 @@ class WeatherAgent(A2AServer):
         tags=["weather", "forecast"]
     )
     def get_weather(self, location):
-        """Get weather for a location."""
-        # Mock implementation
-        return f"It's sunny and 75°F in {location}"
-    
+        """Get weather for a location using OpenWeatherMap API."""
+        try:
+            # เชื่อมต่อกับ OpenWeatherMap API
+            api_key = "your_openweathermap_api_key"  # ใส่ API Key ของคุณที่นี่
+            url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}&units=metric"
+            response = requests.get(url)
+            response.raise_for_status()  # ตรวจสอบว่าไม่มีข้อผิดพลาด HTTP
+            data = response.json()
+
+            # ดึงข้อมูลสภาพอากาศจาก JSON
+            weather_description = data["weather"][0]["description"]
+            temperature = data["main"]["temp"]
+            return f"The weather in {location} is {weather_description} with a temperature of {temperature}°C."
+        except requests.exceptions.RequestException as e:
+            # จัดการข้อผิดพลาดจาก API
+            return f"Failed to get weather data: {e}"
+        except KeyError:
+            # จัดการข้อผิดพลาดกรณีข้อมูลไม่ครบถ้วน
+            return "Weather data is incomplete or unavailable."
+
     def handle_task(self, task):
+        """Handle incoming tasks and provide weather information."""
         # Extract location from message
         message_data = task.message or {}
         content = message_data.get("content", {})
         text = content.get("text", "") if isinstance(content, dict) else ""
-        
+
         if "weather" in text.lower() and "in" in text.lower():
             location = text.split("in", 1)[1].strip().rstrip("?.")
-            
+
             # Get weather and create response
             weather_text = self.get_weather(location)
             task.artifacts = [{
@@ -46,11 +51,15 @@ class WeatherAgent(A2AServer):
             }]
             task.status = TaskStatus(state=TaskState.COMPLETED)
         else:
-            task.status = TaskStatus(
-                state=TaskState.INPUT_REQUIRED,
-                message={"role": "agent", "content": {"type": "text", 
-                         "text": "Please ask about weather in a specific location."}}
-            )
+            # กรณีข้อความไม่ชัดเจน
+            location = "Lam Luk Ka, Thailand"  # ตั้งค่าที่ตั้งเป็นประเทศไทย เมืองหลวง อำเภอลำลูกกา
+
+            # Get weather for default location
+            weather_text = self.get_weather(location)
+            task.artifacts = [{
+                "parts": [{"type": "text", "text": weather_text}]
+            }]
+            task.status = TaskStatus(state=TaskState.COMPLETED)
         return task
 
 # Run the server
