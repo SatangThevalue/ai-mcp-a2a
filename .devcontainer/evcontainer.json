@@ -1,0 +1,70 @@
+// .devcontainer/devcontainer.json
+{
+  "name": "Python AI/ML Development Codespace",
+  "image": "mcr.microsoft.com/devcontainers/python:0-3.10",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/google-cloud-cli:1": {
+      "installComponents": ["gke-gcloud-auth-plugin"]
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "EditorConfig.EditorConfig",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "python.linting.pylintEnabled": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        }
+      }
+    }
+  },
+  "postCreateCommand": {
+    "install_python_deps": "pip install --no-cache-dir -r requirements.txt",
+    "install_gcloud_auth": "gcloud auth application-default login --no-launch-browser"
+  },
+  "postAttachCommand": {
+    "start_server": "python main.py"
+  },
+  "forwardPorts": [8000],
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "/workspace/credentials/service-account-key.json"
+  },
+  "mounts": [
+    "source=/workspace/data,target=/workspace/data,type=bind,consistency=cached"
+  ]
+}
